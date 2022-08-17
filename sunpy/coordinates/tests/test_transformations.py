@@ -29,6 +29,7 @@ from sunpy.coordinates import (
     HeliographicCarrington,
     HeliographicStonyhurst,
     Helioprojective,
+    HelioprojectiveRadial,
     sun,
 )
 from sunpy.coordinates.ephemeris import get_body_heliographic_stonyhurst, get_earth
@@ -1015,3 +1016,37 @@ def test_propagate_with_solar_surface():
     assert_quantity_allclose(result4.lon, result1.lon)
     assert_quantity_allclose(result4.lat, result1.lat)
     assert_quantity_allclose(result4.distance, result1.distance)
+
+
+def test_hpc_hpr_roundtrip():
+    hpc = Helioprojective(0*u.arcsec, -100*u.arcsec)
+
+    hpr = hpc.transform_to(HelioprojectiveRadial)
+
+    hpc2 = hpr.transform_to(Helioprojective)
+
+    assert_quantity_allclose(hpc.Tx, hpc2.Tx, atol=1e-13*u.arcsec)
+    assert_quantity_allclose(hpc.Ty, hpc2.Ty, atol=1e-13*u.arcsec)
+
+
+def test_hpc_hpr_roundtrip_3d():
+    hpc = Helioprojective(0*u.arcsec, -100*u.arcsec, obstime="2017-12-25")
+    hpc = hpc.calculate_distance()
+
+    hpr = hpc.transform_to(HelioprojectiveRadial)
+
+    hpc2 = hpr.transform_to(Helioprojective)
+
+    assert_quantity_allclose(hpc.Tx, hpc2.Tx, atol=1e-13*u.arcsec)
+    assert_quantity_allclose(hpc.Ty, hpc2.Ty, atol=1e-13*u.arcsec)
+    assert_quantity_allclose(hpc.distance, hpc2.distance, atol=1e-13*u.km)
+
+
+def test_hpr_calculate_distance():
+    hpc = Helioprojective(0*u.arcsec, -100*u.arcsec, obstime="2017-12-25")
+    hpcd = hpc.calculate_distance()
+
+    hpr = hpc.transform_to(HelioprojectiveRadial(obstime="2017-12-25"))
+    hpr = hpr.calculate_distance()
+
+    assert_quantity_allclose(hpcd.distance, hpr.distance, rtol=1e-4)

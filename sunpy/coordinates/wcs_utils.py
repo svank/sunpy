@@ -18,6 +18,7 @@ from .frames import (
     HeliographicCarrington,
     HeliographicStonyhurst,
     Helioprojective,
+    HelioprojectiveRadial,
     SunPyBaseCoordinateFrame,
 )
 
@@ -257,6 +258,9 @@ def solar_frame_to_wcs_mapping(frame, projection='TAN'):
     wcs.wcs.ctype = [xcoord, ycoord]
 
     return wcs
+
+    if xcoord == 'HRLN' and ycoord == 'HRLT':
+        return HelioprojectiveRadial(obstime=dateobs, observer=observer, rsun=rsun)
 
 
 astropy.wcs.utils.WCS_FRAME_MAPPINGS.append([solar_wcs_frame_mapping])
