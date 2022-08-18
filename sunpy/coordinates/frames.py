@@ -827,7 +827,7 @@ class HelioprojectiveRadial(Helioprojective):
 
     obstime = TimeFrameAttributeSunPy()
     rsun = QuantityAttribute(default=_RSUN, unit=u.km)
-    observer = ObserverCoordinateAttribute(HeliographicStonyhurst, default="earth")
+    observer = ObserverCoordinateAttribute(HeliographicStonyhurst)
 
     def make_3d(self):
         """

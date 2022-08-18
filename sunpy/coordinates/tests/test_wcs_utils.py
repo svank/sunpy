@@ -15,6 +15,7 @@ from sunpy.coordinates.frames import (
     HeliographicCarrington,
     HeliographicStonyhurst,
     Helioprojective,
+    HelioprojectiveRadial,
 )
 from sunpy.coordinates.wcs_utils import (
     _set_wcs_aux_obs_coord,
@@ -26,6 +27,7 @@ from sunpy.coordinates.wcs_utils import (
 
 @pytest.mark.parametrize('ctype, frame', [[['HPLN', 'HPLT'], Helioprojective],
                                           [['HPLT', 'HPLN'], Helioprojective],
+                                          [['HRLN', 'HRLT'], HelioprojectiveRadial],
                                           [['HGLN', 'HGLT'], HeliographicStonyhurst],
                                           [['CRLN', 'CRLT'], HeliographicCarrington],
                                           [['SOLX', 'SOLY'], Heliocentric]
@@ -140,6 +142,36 @@ def test_hpc_frame_to_wcs():
     assert isinstance(result_wcs, WCS)
 
     assert result_wcs.wcs.ctype[0] == 'HPLN-TAN'
+    assert result_wcs.wcs.cunit[0] == 'arcsec'
+    assert result_wcs.wcs.dateobs == ''
+
+    new_frame = solar_wcs_frame_mapping(result_wcs)
+    assert new_frame.observer is None
+    assert new_frame.rsun == frame.rsun
+
+
+def test_hpr_frame_to_wcs():
+    frame = HelioprojectiveRadial(
+            observer="earth", obstime='2013-10-28', rsun=690*u.Mm)
+    result_wcs = solar_frame_to_wcs_mapping(frame)
+
+    assert isinstance(result_wcs, WCS)
+
+    assert result_wcs.wcs.ctype[0] == 'HRLN-TAN'
+    assert result_wcs.wcs.cunit[0] == 'arcsec'
+    assert result_wcs.wcs.dateobs == '2013-10-28T00:00:00.000'
+    assert result_wcs.wcs.aux.rsun_ref == frame.rsun.to_value(u.m)
+
+    new_frame = solar_wcs_frame_mapping(result_wcs)
+    assert new_frame.rsun == frame.rsun
+
+    # Test a frame with no obstime and no observer
+    frame = HelioprojectiveRadial()
+    result_wcs = solar_frame_to_wcs_mapping(frame)
+
+    assert isinstance(result_wcs, WCS)
+
+    assert result_wcs.wcs.ctype[0] == 'HRLN-TAN'
     assert result_wcs.wcs.cunit[0] == 'arcsec'
     assert result_wcs.wcs.dateobs == ''
 

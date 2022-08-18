@@ -187,7 +187,7 @@ class SouthPoleSphericalRepresentation(BaseRepresentation):
         if inspect.isclass(other_class) and not differential_class:
             if issubclass(other_class, SphericalRepresentation):
                 return other_class(lon=self.lon, lat=self.lat - 90 * u.deg,
-                                   distance=1.0)
+                                   distance=self.distance)
             elif issubclass(other_class, UnitSphericalRepresentation):
                 return other_class(lon=self.lon, lat=self.lat - 90 * u.deg)
 

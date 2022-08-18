@@ -169,6 +169,7 @@ def _sunpy_frame_class_from_ctypes(ctypes):
 
     mapping = {
         Helioprojective: {'HPLN', 'HPLT'},
+        HelioprojectiveRadial: {'HRLN', 'HRLT'},
         HeliographicStonyhurst: {'HGLN', 'HGLT'},
         HeliographicCarrington: {'CRLN', 'CRLT'},
         Heliocentric: {'SOLX', 'SOLY'},
@@ -235,7 +236,13 @@ def solar_frame_to_wcs_mapping(frame, projection='TAN'):
         if frame.obstime:
             wcs.wcs.dateobs = frame.obstime.utc.isot
 
-        if isinstance(frame, Helioprojective):
+        if isinstance(frame, HelioprojectiveRadial):
+            # Must be before Helioprojective, as HelioprojectiveRadial is a
+            # subclass
+            xcoord = 'HRLN' + '-' + projection
+            ycoord = 'HRLT' + '-' + projection
+            wcs.wcs.cunit = ['arcsec', 'arcsec']
+        elif isinstance(frame, Helioprojective):
             xcoord = 'HPLN' + '-' + projection
             ycoord = 'HPLT' + '-' + projection
             wcs.wcs.cunit = ['arcsec', 'arcsec']
@@ -258,9 +265,6 @@ def solar_frame_to_wcs_mapping(frame, projection='TAN'):
     wcs.wcs.ctype = [xcoord, ycoord]
 
     return wcs
-
-    if xcoord == 'HRLN' and ycoord == 'HRLT':
-        return HelioprojectiveRadial(obstime=dateobs, observer=observer, rsun=rsun)
 
 
 astropy.wcs.utils.WCS_FRAME_MAPPINGS.append([solar_wcs_frame_mapping])
