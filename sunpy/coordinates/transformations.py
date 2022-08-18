@@ -37,8 +37,6 @@ from astropy.coordinates.representation import (
     CartesianRepresentation,
     SphericalRepresentation,
     UnitSphericalRepresentation,
-    SouthPoleSphericalRepresentation,
-    UnitSouthPoleSphericalRepresentation,
 )
 # Import erfa via astropy to make sure we are using the same ERFA library as Astropy
 from astropy.coordinates.sky_coordinate import erfa
@@ -60,6 +58,7 @@ from .frames import (
     HelioprojectiveRadial,
     FITSHelioprojectiveRadial,
 )
+from .representation import SouthPoleSphericalRepresentation, UnitSouthPoleSphericalRepresentation
 
 RSUN_METERS = constants.get('radius').si.to(u.m)
 
@@ -598,7 +597,7 @@ def hpc_to_hpr(hpcframe, hprframe):
     btm = np.sin(lat)
     psi = np.arctan2(top, btm)
 
-    if distance:
+    if distance is not None:
         representation = SouthPoleSphericalRepresentation(lon=psi, lat=el, distance=distance)
     else:
         representation = UnitSouthPoleSphericalRepresentation(lon=psi, lat=el)
@@ -632,7 +631,7 @@ def hpr_to_hpc(hprframe, hpcframe):
     # Latitude conversion
     lat = np.arcsin(np.sin(el) * np.cos(psi))
 
-    if distance:
+    if distance is not None:
         representation = SphericalRepresentation(lon=lon, lat=lat, distance=distance)
     else:
         representation = UnitSphericalRepresentation(lon=lon, lat=lat)
@@ -660,7 +659,6 @@ def fitshpr_to_hpr(fitsframe, hprframe):
     return out
 
 
->>>>>>> hpr-stuart-orig
 @frame_transform_graph.transform(FunctionTransformWithFiniteDifference,
                                  Helioprojective, Helioprojective)
 @_transformation_debug("HPC->HPC")
