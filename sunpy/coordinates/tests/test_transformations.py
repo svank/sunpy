@@ -355,6 +355,103 @@ def test_hpc_hcc_different_observer_radius():
     assert_quantity_allclose(hcc.z, 0*u.AU, atol=1e-10*u.AU)
 
 
+def test_hpr_to_hpc():
+    hpr = HelioprojectiveRadial(90*u.deg, 10*u.deg)
+    hpc = hpr.transform_to(Helioprojective())
+    
+    assert_quantity_allclose(hpc.Tx, -10*u.deg)
+    assert_quantity_allclose(hpc.Ty, 0*u.deg, atol=1e-10*u.deg)
+    
+    hpr = HelioprojectiveRadial(180*u.deg, 10*u.deg)
+    hpc = hpr.transform_to(Helioprojective())
+    
+    assert_quantity_allclose(hpc.Tx, 0*u.deg, atol=1e-10*u.deg)
+    assert_quantity_allclose(hpc.Ty, -10*u.deg)
+
+
+def test_hpr_to_hpc_3d():
+    hpr = HelioprojectiveRadial(90*u.deg, 10*u.deg, 1*u.Mm)
+    hpc = hpr.transform_to(Helioprojective())
+    
+    assert_quantity_allclose(hpc.Tx, -10*u.deg)
+    assert_quantity_allclose(hpc.Ty, 0*u.deg, atol=1e-10*u.deg)
+    assert_quantity_allclose(hpc.distance, 1*u.Mm)
+    
+    hpr = HelioprojectiveRadial(180*u.deg, 10*u.deg, 1*u.Mm)
+    hpc = hpr.transform_to(Helioprojective())
+    
+    assert_quantity_allclose(hpc.Tx, 0*u.deg, atol=1e-10*u.deg)
+    assert_quantity_allclose(hpc.Ty, -10*u.deg)
+    assert_quantity_allclose(hpc.distance, 1*u.Mm)
+
+
+def test_hpc_to_hpr():
+    hpc = Helioprojective(0*u.deg, -10*u.deg)
+    hpr = hpc.transform_to(HelioprojectiveRadial())
+    
+    assert_quantity_allclose(hpr.psi, 180*u.deg)
+    assert_quantity_allclose(hpr.el, 10*u.deg)
+    
+    hpc = Helioprojective(-10*u.deg, 0*u.deg)
+    hpr = hpc.transform_to(HelioprojectiveRadial())
+    
+    assert_quantity_allclose(hpr.psi, 90*u.deg)
+    assert_quantity_allclose(hpr.el, 10*u.deg)
+
+
+def test_hpc_to_hpr_3d():
+    hpc = Helioprojective(0*u.deg, -10*u.deg, 1*u.Mm)
+    hpr = hpc.transform_to(HelioprojectiveRadial())
+    
+    assert_quantity_allclose(hpr.psi, 180*u.deg)
+    assert_quantity_allclose(hpr.el, 10*u.deg)
+    assert_quantity_allclose(hpr.distance, 1*u.Mm)
+    
+    hpc = Helioprojective(-10*u.deg, 0*u.deg, 1*u.Mm)
+    hpr = hpc.transform_to(HelioprojectiveRadial())
+    
+    assert_quantity_allclose(hpr.psi, 90*u.deg)
+    assert_quantity_allclose(hpr.el, 10*u.deg)
+    assert_quantity_allclose(hpr.distance, 1*u.Mm)
+
+
+def test_hpc_hpr_roundtrip():
+    hpc = Helioprojective(0*u.arcsec, -100*u.arcsec)
+
+    hpr = hpc.transform_to(HelioprojectiveRadial())
+
+    hpc2 = hpr.transform_to(Helioprojective())
+
+    assert_quantity_allclose(hpc.Tx, hpc2.Tx, atol=1e-13*u.arcsec)
+    assert_quantity_allclose(hpc.Ty, hpc2.Ty, atol=1e-13*u.arcsec)
+
+
+def test_hpc_hpr_roundtrip_3d():
+    hpc = Helioprojective(0*u.arcsec, -100*u.arcsec,
+            observer=HeliographicStonyhurst(0*u.deg, 0*u.deg, 1*u.AU))
+    hpc = hpc.make_3d()
+
+    hpr = hpc.transform_to(HelioprojectiveRadial())
+
+    hpc2 = hpr.transform_to(Helioprojective())
+
+    assert_quantity_allclose(hpc.Tx, hpc2.Tx, atol=1e-13*u.arcsec)
+    assert_quantity_allclose(hpc.Ty, hpc2.Ty, atol=1e-13*u.arcsec)
+    assert_quantity_allclose(hpc.distance, hpc2.distance, atol=1e-13*u.km)
+
+
+def test_hpr_make_3d():
+    hpc = Helioprojective(0*u.arcsec, -100*u.arcsec,
+            observer=HeliographicStonyhurst(0*u.deg, 0*u.deg, 1*u.AU))
+    hpcd = hpc.make_3d()
+
+    hpr = hpc.transform_to(HelioprojectiveRadial(
+        observer=HeliographicStonyhurst(0*u.deg, 0*u.deg, 1*u.AU)))
+    hpr = hpr.make_3d()
+
+    assert_quantity_allclose(hpcd.distance, hpr.distance, rtol=1e-4)
+
+
 def test_hgs_hgs():
     # Test HGS loopback transformation
     obstime = Time('2001-01-01')
@@ -1016,40 +1113,3 @@ def test_propagate_with_solar_surface():
     assert_quantity_allclose(result4.lon, result1.lon)
     assert_quantity_allclose(result4.lat, result1.lat)
     assert_quantity_allclose(result4.distance, result1.distance)
-
-
-def test_hpc_hpr_roundtrip():
-    hpc = Helioprojective(0*u.arcsec, -100*u.arcsec)
-
-    hpr = hpc.transform_to(HelioprojectiveRadial())
-
-    hpc2 = hpr.transform_to(Helioprojective())
-
-    assert_quantity_allclose(hpc.Tx, hpc2.Tx, atol=1e-13*u.arcsec)
-    assert_quantity_allclose(hpc.Ty, hpc2.Ty, atol=1e-13*u.arcsec)
-
-
-def test_hpc_hpr_roundtrip_3d():
-    hpc = Helioprojective(0*u.arcsec, -100*u.arcsec,
-            observer=HeliographicStonyhurst(0*u.deg, 0*u.deg, 1*u.AU))
-    hpc = hpc.make_3d()
-
-    hpr = hpc.transform_to(HelioprojectiveRadial())
-
-    hpc2 = hpr.transform_to(Helioprojective())
-
-    assert_quantity_allclose(hpc.Tx, hpc2.Tx, atol=1e-13*u.arcsec)
-    assert_quantity_allclose(hpc.Ty, hpc2.Ty, atol=1e-13*u.arcsec)
-    assert_quantity_allclose(hpc.distance, hpc2.distance, atol=1e-13*u.km)
-
-
-def test_hpr_make_3d():
-    hpc = Helioprojective(0*u.arcsec, -100*u.arcsec,
-            observer=HeliographicStonyhurst(0*u.deg, 0*u.deg, 1*u.AU))
-    hpcd = hpc.make_3d()
-
-    hpr = hpc.transform_to(HelioprojectiveRadial(
-        observer=HeliographicStonyhurst(0*u.deg, 0*u.deg, 1*u.AU)))
-    hpr = hpr.make_3d()
-
-    assert_quantity_allclose(hpcd.distance, hpr.distance, rtol=1e-4)
