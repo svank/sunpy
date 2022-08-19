@@ -19,6 +19,11 @@ from sunpy.coordinates.frames import (
     HeliographicCarrington,
     HeliographicStonyhurst,
     Helioprojective,
+    HelioprojectiveRadial,
+)
+from sunpy.coordinates.representation import (
+    SouthPoleSphericalRepresentation,
+    UnitSouthPoleSphericalRepresentation,
 )
 from sunpy.coordinates.sun import angular_radius
 from sunpy.time import parse_time
@@ -98,7 +103,7 @@ def test_create_hpc_2d(args, kwargs):
                                   'Ty': 0 * u.arcsec,
                                   'distance': 1 * u.Mm}),
                           ([0 * u.deg, 0 * u.arcsec], {'distance': 1 * u.Mm})])
-def test_create_3d(args, kwargs):
+def test_create_hpc_3d(args, kwargs):
     hpc1 = init_frame(Helioprojective, args, kwargs)
 
     # Check we have the right class!
@@ -123,7 +128,7 @@ def test_create_3d(args, kwargs):
     assert hpc1.distance.unit is u.Mm
 
 
-def test_cart_init():
+def test_hpc_cart_init():
     hpc1 = Helioprojective(CartesianRepresentation(0 * u.km, 0 * u.km, 1 *
                                                    u.Mm))
 
@@ -229,6 +234,190 @@ def test_hpc_low_precision_float_warning():
 
     with pytest.warns(SunpyUserWarning, match="Tx is float32, and Ty is float16"):
         hpc.make_3d()
+
+
+# ==============================================================================
+# HelioprojectiveRadial Tests
+# ==============================================================================
+
+
+@pytest.mark.parametrize('args, kwargs',
+                         two_D_parameters + [(None, {'psi': 0 * u.deg,
+                                                     'el': 0 * u.arcsec})])
+def test_create_hpr_2d(args, kwargs):
+    hpr1 = init_frame(HelioprojectiveRadial, args, kwargs)
+
+    # Check we have the right class!
+    assert isinstance(hpr1, HelioprojectiveRadial)
+    rep_kwarg = kwargs.get('representation_type', None) if kwargs else None
+
+    if rep_kwarg == 'unitspherical':
+        # The input coords are parsed as normal spherical coords, and the Frame
+        # object has spherical-coord properties
+        assert isinstance(hpr1._data, UnitSphericalRepresentation)
+        el = hpr1.dec + 90*u.deg
+        # 0 spherical latitude is 90 deg elongation
+        target_el = 90*u.deg
+    elif args is not None and isinstance(args[0], UnitSphericalRepresentation):
+        # The input coords are parsed as normal spherical coords, though the
+        # Frame keeps SouthPole-coord properties
+        assert isinstance(hpr1._data, UnitSphericalRepresentation)
+        el = hpr1.el
+        # 0 spherical latitude is 90 deg elongation
+        target_el = 90*u.deg
+    else:
+        # The input coords are parsed as elongation
+        assert isinstance(hpr1._data, UnitSouthPoleSphericalRepresentation)
+        el = hpr1.el
+        target_el = 0*u.deg
+
+    # Check the attrs are correct
+    assert hpr1.psi == 0 * u.arcsec
+    assert el == target_el
+
+    # Check the attrs are in the correct default units
+    assert hpr1.psi.unit is u.arcsec
+    assert el.unit is u.arcsec
+
+
+@pytest.mark.parametrize(
+    'args, kwargs',
+    three_D_parameters + [(None, {'psi': 0 * u.deg,
+                                  'el': 0 * u.arcsec,
+                                  'distance': 1 * u.Mm}),
+                          ([0 * u.deg, 0 * u.arcsec], {'distance': 1 * u.Mm})])
+def test_create_hpr_3d(args, kwargs):
+    hpr1 = init_frame(HelioprojectiveRadial, args, kwargs)
+
+    # Check we have the right class!
+    assert isinstance(hpr1, HelioprojectiveRadial)
+    rep_kwarg = kwargs.get('representation_type', None) if kwargs else None
+
+    if rep_kwarg == 'spherical':
+        # The input coords are parsed as normal spherical coords, and the Frame
+        # object has spherical-coord properties
+        assert isinstance(hpr1._data, SphericalRepresentation)
+        el = hpr1.dec + 90*u.deg
+        # 0 spherical latitude is 90 deg elongation
+        target_el = 90*u.deg
+    elif args is not None and isinstance(args[0], SphericalRepresentation):
+        # The input coords are parsed as normal spherical coords, though the
+        # Frame keeps SouthPole-coord properties
+        assert isinstance(hpr1._data, SphericalRepresentation)
+        el = hpr1.el
+        # 0 spherical latitude is 90 deg elongation
+        target_el = 90*u.deg
+    else:
+        # The input coords are parsed as elongation
+        assert isinstance(hpr1._data, SouthPoleSphericalRepresentation)
+        el = hpr1.el
+        target_el = 0*u.deg
+
+    # Check the attrs are correct
+    assert hpr1.psi == 0 * u.arcsec
+    assert el == target_el
+    assert hpr1.distance == 1 * u.Mm
+
+    # Check the attrs are in the correct default units
+    assert hpr1.psi.unit is u.arcsec
+    assert el.unit is u.arcsec
+    assert hpr1.distance.unit is u.Mm
+
+
+def test_hpr_cart_init():
+    hpr1 = HelioprojectiveRadial(
+            CartesianRepresentation(0 * u.km, 0 * u.km, 1 * u.Mm))
+
+    assert isinstance(hpr1, HelioprojectiveRadial)
+    assert isinstance(hpr1._data, CartesianRepresentation)
+
+
+# Test HPR Calculate Distance
+def test_hpr_distance():
+    hpr1 = HelioprojectiveRadial(0 * u.deg, 0 * u.arcsec,
+                           observer=HeliographicStonyhurst(
+                               0*u.deg, 0*u.deg, 1*u.AU))
+
+    assert isinstance(hpr1, HelioprojectiveRadial)
+    assert isinstance(hpr1._data, UnitSouthPoleSphericalRepresentation)
+
+    # Check the attrs are correct
+    assert hpr1.psi == 0 * u.arcsec
+    assert hpr1.el == 0 * u.arcsec
+
+    hpr2 = hpr1.make_3d()
+
+    assert isinstance(hpr2._data, SouthPoleSphericalRepresentation)
+
+    # Check the attrs are correct
+    assert hpr2.psi == 0 * u.arcsec
+    assert hpr2.el == 0 * u.arcsec
+    assert_quantity_allclose(hpr2.distance, DSUN_METERS - RSUN_METERS)
+
+
+def test_hpr_distance_cartesian():
+    # Test detection of distance in other representations
+    hpr1 = HelioprojectiveRadial(
+            CartesianRepresentation(0 * u.km, 0 * u.km, 1 * u.Mm))
+
+    assert isinstance(hpr1, HelioprojectiveRadial)
+    assert isinstance(hpr1._data, CartesianRepresentation)
+
+    assert hpr1.make_3d() is hpr1
+
+
+def test_hpr_distance_off_limb():
+    hpr1 = HelioprojectiveRadial(10 * u.arcsec, 1500 * u.arcsec,
+                           observer=HeliographicStonyhurst(
+                               0*u.deg, 0*u.deg, 1*u.AU))
+
+    assert isinstance(hpr1, HelioprojectiveRadial)
+    assert isinstance(hpr1._data, UnitSouthPoleSphericalRepresentation)
+
+    # Check the attrs are correct
+    assert u.allclose(hpr1.psi, 10 * u.arcsec)
+    assert hpr1.el == 1500 * u.arcsec
+
+    with pytest.warns(SunpyUserWarning, match="is all NaNs"):
+        hpr2 = hpr1.make_3d()
+    assert isinstance(hpr2._data, SouthPoleSphericalRepresentation)
+    # Check the attrs are correct
+    assert hpr2.psi == 10 * u.arcsec
+    assert hpr2.el == 1500 * u.arcsec
+    assert_quantity_allclose(hpr2.distance, u.Quantity(np.nan, u.km))
+
+
+def test_hpr_distance_3D():
+    hpr1 = HelioprojectiveRadial(10 * u.arcsec, 1500 * u.arcsec, 100 * u.Mm)
+
+    assert isinstance(hpr1, HelioprojectiveRadial)
+    assert isinstance(hpr1._data, SouthPoleSphericalRepresentation)
+
+    # Check the attrs are correct
+    assert hpr1.psi == 10 * u.arcsec
+    assert hpr1.el == 1500 * u.arcsec
+
+    hpr2 = hpr1.make_3d()
+
+    assert hpr2 is hpr1
+
+
+def test_hpr_default_observer():
+    # Observer is considered default if it hasn't been specified *and* if obstime isn't specified
+    hpr = HelioprojectiveRadial(0*u.arcsec, 0*u.arcsec)
+    assert hpr.is_frame_attr_default('observer')
+
+    hpr = HelioprojectiveRadial(0*u.arcsec, 0*u.arcsec, obstime='2019-06-01')
+    assert not hpr.is_frame_attr_default('observer')
+
+
+def test_hpr_low_precision_float_warning():
+    hpr = HelioprojectiveRadial(u.Quantity(0, u.deg, dtype=np.float32),
+                          u.Quantity(0, u.arcsec, dtype=np.float16),
+                          observer=HeliographicStonyhurst(0*u.deg, 0*u.deg, 1*u.AU))
+
+    with pytest.warns(SunpyUserWarning, match="Psi is float32, and El is float16"):
+        hpr.make_3d()
 
 
 # ==============================================================================

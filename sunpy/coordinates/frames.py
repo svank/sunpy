@@ -858,7 +858,7 @@ class HelioprojectiveRadial(Helioprojective):
         if not set([lon.dtype.type, lat.dtype.type]).issubset([float, np.float64, np.longdouble]):
             warn_user("The HelioprojectiveRadial component values appear to be "
                       "lower precision than the native Python float: "
-                      f"Tx is {lon.dtype.name}, and Ty is {lat.dtype.name}. "
+                      f"Psi is {lon.dtype.name}, and El is {lat.dtype.name}. "
                       "To minimize precision loss, you may want to cast the values to "
                       "`float` or `numpy.float64` via the NumPy method `.astype()`.")
 
