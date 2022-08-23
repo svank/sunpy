@@ -5,13 +5,14 @@ import numpy as np
 
 import astropy.units as u
 from astropy.coordinates.representation import (BaseRepresentation,
+                                                BaseDifferential,
                                                 CartesianRepresentation,
                                                 SphericalRepresentation,
                                                 UnitSphericalRepresentation)
 from astropy.coordinates.angles import Angle, Longitude
 from astropy.coordinates.distances import Distance
 
-__all__ = ['UnitSouthPoleSphericalRepresentation', 'SouthPoleSphericalRepresentation']
+__all__ = ['UnitSouthPoleSphericalRepresentation', 'SouthPoleSphericalRepresentation', 'SouthPoleSphericalDifferential']
 
 
 class UnitSouthPoleSphericalRepresentation(BaseRepresentation):
@@ -160,24 +161,35 @@ class SouthPoleSphericalRepresentation(BaseRepresentation):
         if self._distance.unit.physical_type == 'length':
             self._distance = self.distance.view(Distance)
 
-    # def unit_vectors(self):
-    #     sinlon, coslon = np.sin(self.lon), np.cos(self.lon)
-    #     sinlat, coslat = np.sin(self.lat), np.cos(self.lat)
-    #     return OrderedDict(
-    #         (('lon', CartesianRepresentation(-sinlon, coslon, 0., copy=False)),
-    #          ('lat', CartesianRepresentation(coslat*coslon,
-    #                                            coslat*sinlon,
-    #                                            -sinlat, copy=False)),
-    #          ('r', CartesianRepresentation(sinlat*coslon, sinlat*sinlon,
-    #                                        coslat, copy=False))))
+    def unit_vectors(self):
+        sinlon, coslon = np.sin(self.lon), np.cos(self.lon)
+        sinlat, coslat = np.sin(self.lat), np.cos(self.lat)
+        # Note that we are the same as SphericalRepresentation except for the
+        # 90-degree offset in latitude. Our latitude is zero at the SP (theta
+        # in Thompson 2005 terminology), while SphericalRepresentation's
+        # expressions require latitude of 0 at the equator (declination delta in
+        # Thompson 2005).
+        # Our coslat = cos(latitude + 90 degrees) = their -sinlat
+        # Our sinlat = sin(latitude + 90 degrees) = their coslat
+        # So where SphericalRepresentation has coslat in the following
+        # expressions, that becomes cos(declination) = cos(lat + 90) = -sinlat
+        # with our variables, and sinlat becomes coslat.
+        return OrderedDict(
+            (('lon', CartesianRepresentation(-sinlon, coslon, 0., copy=False)),
+             ('lat', CartesianRepresentation(coslat*coslon,
+                                             coslat*sinlon,
+                                             sinlat, copy=False)),
+             ('distance', CartesianRepresentation(sinlat*coslon,
+                                                  sinlat*sinlon,
+                                                  -coslat, copy=False))))
 
-    # def scale_factors(self):
-    #     r = self.distance / u.radian
-    #     sinlat = np.sin(self.lat)
-    #     l = np.broadcast_to(1.*u.one, self.shape, subok=True)
-    #     return OrderedDict((('lon', r * sinlat),
-    #                         ('lat', r),
-    #                         ('r', l)))
+    def scale_factors(self):
+        r = self.distance / u.radian
+        sinlat = np.sin(self.lat)
+        l = np.broadcast_to(1.*u.one, self.shape, subok=True)
+        return OrderedDict((('lon', r * sinlat),
+                            ('lat', r),
+                            ('distance', l)))
 
     def represent_as(self, other_class, differential_class=None):
         # Take a short cut if the other class is a spherical representation
@@ -240,3 +252,8 @@ class SouthPoleSphericalRepresentation(BaseRepresentation):
             Vector norm, with the same shape as the representation.
         """
         return np.abs(self.distance)
+
+
+class SouthPoleSphericalDifferential(BaseDifferential):
+    base_representation = SouthPoleSphericalRepresentation
+
